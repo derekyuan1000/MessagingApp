@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Send, MessageSquare, Sparkles, Users, LogOut } from "lucide-react";
-import ThreeBackground from "../components/three-background";
 
 interface Message {
   id: string;
@@ -105,8 +104,7 @@ export default function Home() {
   if (!isJoined) {
     return (
       <>
-        <ThreeBackground />
-        <div className="min-h-screen flex items-center justify-center p-4 relative">
+        <div className="min-h-screen flex items-center justify-center p-4 relative bg-slate-950">
 
           <div className="relative w-full max-w-md">
             {/* Floating animation wrapper */}
@@ -169,8 +167,7 @@ export default function Home() {
 
   return (
     <>
-      <ThreeBackground />
-      <div className="min-h-screen p-4 relative">
+      <div className="min-h-screen p-4 relative bg-slate-950">
 
         <div className="relative max-w-5xl mx-auto h-[calc(100vh-2rem)] flex flex-col">
           <Card className="flex-1 flex flex-col backdrop-blur-2xl bg-slate-900/80 border-slate-700/50 shadow-2xl overflow-hidden">
