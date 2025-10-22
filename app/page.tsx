@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { ScrollArea } from "../components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Send, MessageSquare, Sparkles, Users, LogOut } from "lucide-react";
-import ThreeBackground from "@/components/three-background";
+import ThreeBackground from "../components/three-background";
 
 interface Message {
   id: string;
@@ -292,4 +292,3 @@ export default function Home() {
     </>
   );
 }
-
