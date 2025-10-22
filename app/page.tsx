@@ -1,425 +1,295 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MessageSquare, Users, Send, LogOut } from "lucide-react"
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Send, MessageSquare, Sparkles, Users, LogOut } from "lucide-react";
+import ThreeBackground from "@/components/three-background";
 
 interface Message {
-  id: string
-  from: string
-  to: string
-  content: string
-  timestamp: string
+  id: string;
+  username: string;
+  text: string;
+  timestamp: string;
 }
 
-interface User {
-  username: string
-}
-
-export default function MessagingApp() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [currentUser, setCurrentUser] = useState("")
-  const [messages, setMessages] = useState<Message[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [selectedUser, setSelectedUser] = useState("")
-  const [messageContent, setMessageContent] = useState("")
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-
-  // Auth form states
-  const [loginUsername, setLoginUsername] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-  const [registerUsername, setRegisterUsername] = useState("")
-  const [registerPassword, setRegisterPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+export default function Home() {
+  const [username, setUsername] = useState("");
+  const [isJoined, setIsJoined] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Check if user is already logged in
-    checkAuthStatus()
-  }, [])
+    if (isJoined) {
+      fetchMessages();
+      const interval = setInterval(fetchMessages, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [isJoined]);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchUsers()
-      fetchMessages()
-      // Set up polling for new messages
-      const interval = setInterval(fetchMessages, 2000)
-      return () => clearInterval(interval)
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [isLoggedIn, currentUser])
-
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch("/api/auth/status")
-      if (response.ok) {
-        const data = await response.json()
-        if (data.user) {
-          setCurrentUser(data.user)
-          setIsLoggedIn(true)
-        }
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error)
-    }
-  }
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setSuccess("")
-
-    if (registerPassword !== confirmPassword) {
-      setError("Passwords do not match")
-      return
-    }
-
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: registerUsername,
-          password: registerPassword,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess("Account created successfully! You can now log in.")
-        setRegisterUsername("")
-        setRegisterPassword("")
-        setConfirmPassword("")
-      } else {
-        setError(data.error || "Registration failed")
-      }
-    } catch (error) {
-      setError("Registration failed. Please try again.")
-    }
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: loginUsername,
-          password: loginPassword,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setCurrentUser(loginUsername)
-        setIsLoggedIn(true)
-        setLoginUsername("")
-        setLoginPassword("")
-      } else {
-        setError(data.error || "Login failed")
-      }
-    } catch (error) {
-      setError("Login failed. Please try again.")
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" })
-      setIsLoggedIn(false)
-      setCurrentUser("")
-      setMessages([])
-      setUsers([])
-      setSelectedUser("")
-    } catch (error) {
-      console.error("Logout failed:", error)
-    }
-  }
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch("/api/users")
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data.users.filter((user: User) => user.username !== currentUser))
-      }
-    } catch (error) {
-      console.error("Failed to fetch users:", error)
-    }
-  }
+  }, [messages]);
 
   const fetchMessages = async () => {
     try {
-      const response = await fetch("/api/messages")
+      const response = await fetch("/api/messages");
       if (response.ok) {
-        const data = await response.json()
-        setMessages(data.messages)
+        const data = await response.json();
+        setMessages(data.messages);
       }
     } catch (error) {
-      console.error("Failed to fetch messages:", error)
+      console.error("Error fetching messages:", error);
     }
-  }
+  };
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!messageContent.trim() || !selectedUser) return
+  const handleJoin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username.trim()) {
+      setIsJoined(true);
+    }
+  };
 
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    setIsLoading(true);
     try {
       const response = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: selectedUser,
-          content: messageContent,
+          username,
+          text: newMessage.trim(),
         }),
-      })
+      });
 
       if (response.ok) {
-        setMessageContent("")
-        fetchMessages()
+        setNewMessage("");
+        await fetchMessages();
       }
     } catch (error) {
-      console.error("Failed to send message:", error)
+      console.error("Error sending message:", error);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
-  const getConversationMessages = () => {
-    if (!selectedUser) return []
-    return messages
-      .filter(
-        (msg) =>
-          (msg.from === currentUser && msg.to === selectedUser) ||
-          (msg.from === selectedUser && msg.to === currentUser),
-      )
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-  }
+  const getInitials = (name: string) => {
+    return name.slice(0, 2).toUpperCase();
+  };
 
-  if (!isLoggedIn) {
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      "bg-red-500",
+      "bg-blue-500",
+      "bg-green-500",
+      "bg-yellow-500",
+      "bg-purple-500",
+      "bg-pink-500",
+      "bg-indigo-500",
+      "bg-teal-500",
+    ];
+    const index = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[index % colors.length];
+  };
+
+  if (!isJoined) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <MessageSquare className="h-12 w-12 text-blue-600" />
+      <>
+        <ThreeBackground />
+        <div className="min-h-screen flex items-center justify-center p-4 relative">
+
+          <div className="relative w-full max-w-md">
+            {/* Floating animation wrapper */}
+            <div className="animate-float">
+              <Card className="backdrop-blur-2xl bg-slate-900/80 border-slate-700/50 shadow-2xl">
+                <CardHeader className="text-center space-y-6 pb-8">
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full blur-xl opacity-50 animate-pulse" />
+                      <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-4 rounded-full">
+                        <Sparkles className="h-12 w-12 text-white" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <CardTitle className="text-4xl font-bold text-white">
+                      Global Chat
+                    </CardTitle>
+                    <p className="text-slate-300 text-sm">
+                      Join the conversation with people around the world
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <form onSubmit={handleJoin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Input
+                        type="text"
+                        placeholder="Enter your username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="text-lg h-12 backdrop-blur-xl bg-slate-800/50 border-slate-600/50 text-white placeholder:text-slate-400 focus:bg-slate-800/70 focus:border-blue-500/50 transition-all"
+                        maxLength={20}
+                        autoFocus
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full h-12 text-lg bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 border-0 shadow-lg shadow-blue-500/50 transition-all duration-300 hover:scale-[1.02] text-white font-semibold"
+                      size="lg"
+                      disabled={!username.trim()}
+                    >
+                      <Users className="mr-2 h-5 w-5" />
+                      Join Chat
+                    </Button>
+                  </form>
+
+                  <div className="pt-4 flex items-center justify-center gap-2 text-slate-400 text-xs">
+                    <Users className="h-3 w-3" />
+                    <span>Connect with everyone instantly</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            <CardTitle className="text-2xl">ChatApp</CardTitle>
-            <CardDescription>Connect with friends and family</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div>
-                    <Input
-                      type="text"
-                      placeholder="Username"
-                      value={loginUsername}
-                      onChange={(e) => setLoginUsername(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      type="password"
-                      placeholder="Password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Login
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="register">
-                <form onSubmit={handleRegister} className="space-y-4">
-                  <div>
-                    <Input
-                      type="text"
-                      placeholder="Username"
-                      value={registerUsername}
-                      onChange={(e) => setRegisterUsername(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      type="password"
-                      placeholder="Password"
-                      value={registerPassword}
-                      onChange={(e) => setRegisterPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      type="password"
-                      placeholder="Confirm Password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full">
-                    Create Account
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-
-            {error && (
-              <Alert className="mt-4 border-red-200 bg-red-50">
-                <AlertDescription className="text-red-800">{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {success && (
-              <Alert className="mt-4 border-green-200 bg-green-50">
-                <AlertDescription className="text-green-800">{success}</AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    )
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <MessageSquare className="h-8 w-8 text-blue-600" />
-            <h1 className="text-xl font-semibold">ChatApp</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Welcome, {currentUser}</span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </div>
+    <>
+      <ThreeBackground />
+      <div className="min-h-screen p-4 relative">
 
-      <div className="flex h-[calc(100vh-73px)]">
-        {/* Sidebar - Users List */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-gray-500" />
-              <h2 className="font-semibold">Users</h2>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {users.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">No other users online</div>
-            ) : (
-              <div className="p-2">
-                {users.map((user) => (
-                  <button
-                    key={user.username}
-                    onClick={() => setSelectedUser(user.username)}
-                    className={`w-full text-left p-3 rounded-lg mb-1 transition-colors ${
-                      selectedUser === user.username ? "bg-blue-100 text-blue-900" : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {user.username.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-medium">{user.username}</span>
+        <div className="relative max-w-5xl mx-auto h-[calc(100vh-2rem)] flex flex-col">
+          <Card className="flex-1 flex flex-col backdrop-blur-2xl bg-slate-900/80 border-slate-700/50 shadow-2xl overflow-hidden">
+            {/* Header */}
+            <CardHeader className="border-b border-slate-700/50 bg-slate-800/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full blur-md opacity-50 animate-pulse" />
+                    <div className="relative bg-gradient-to-br from-blue-500 to-cyan-600 p-3 rounded-full">
+                      <MessageSquare className="h-6 w-6 text-white" />
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {selectedUser ? (
-            <>
-              {/* Chat Header */}
-              <div className="bg-white border-b border-gray-200 p-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">
-                    {selectedUser.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-semibold">{selectedUser}</h3>
-                    <p className="text-sm text-gray-500">Online</p>
+                    <CardTitle className="text-2xl font-bold text-white">
+                      Global Chat
+                    </CardTitle>
+                    <p className="text-sm text-slate-300 mt-1 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      <span className="text-white font-medium">{username}</span>
+                    </p>
                   </div>
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsJoined(false);
+                    setMessages([]);
+                  }}
+                  className="backdrop-blur-xl bg-slate-800/50 border-slate-600/50 text-white hover:bg-slate-700/70 hover:scale-105 transition-all duration-300"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Leave
+                </Button>
               </div>
+            </CardHeader>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {getConversationMessages().map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.from === currentUser ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        message.from === currentUser ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-900"
-                      }`}
-                    >
-                      <p>{message.content}</p>
-                      <p className={`text-xs mt-1 ${message.from === currentUser ? "text-blue-100" : "text-gray-500"}`}>
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </p>
+            {/* Messages Area */}
+            <ScrollArea className="flex-1 p-6 bg-slate-900/40" ref={scrollRef}>
+              <div className="space-y-4">
+                {messages.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800/50 mb-4">
+                      <MessageSquare className="h-8 w-8 text-slate-400" />
                     </div>
+                    <p className="text-slate-300 text-lg">No messages yet</p>
+                    <p className="text-slate-400 text-sm mt-1">Be the first to say hello!</p>
                   </div>
-                ))}
+                ) : (
+                  messages.map((message, index) => (
+                    <div
+                      key={message.id}
+                      className={`flex gap-3 animate-slide-in ${
+                        message.username === username ? "flex-row-reverse" : ""
+                      }`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      <Avatar className={`${getAvatarColor(message.username)} ring-2 ring-slate-700 shadow-lg`}>
+                        <AvatarFallback className="text-white font-bold">
+                          {getInitials(message.username)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div
+                        className={`flex flex-col max-w-md ${
+                          message.username === username ? "items-end" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5 px-1">
+                          <span className={`text-sm font-semibold ${
+                            message.username === username ? "text-blue-400" : "text-cyan-400"
+                          }`}>
+                            {message.username}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {new Date(message.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div
+                          className={`rounded-2xl px-4 py-3 break-words transition-all duration-300 hover:scale-[1.02] ${
+                            message.username === username
+                              ? "bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30"
+                              : "bg-slate-800/80 text-white border border-slate-600/50 shadow-lg"
+                          }`}
+                        >
+                          {message.text}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+            </ScrollArea>
 
-              {/* Message Input */}
-              <div className="bg-white border-t border-gray-200 p-4">
-                <form onSubmit={sendMessage} className="flex space-x-2">
-                  <Input
-                    type="text"
-                    placeholder={`Message ${selectedUser}...`}
-                    value={messageContent}
-                    onChange={(e) => setMessageContent(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button type="submit" disabled={!messageContent.trim()}>
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </form>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-              <div className="text-center">
-                <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a conversation</h3>
-                <p className="text-gray-500">Choose a user from the sidebar to start messaging</p>
-              </div>
-            </div>
-          )}
+            {/* Input Area */}
+            <CardContent className="border-t border-slate-700/50 pt-4 bg-slate-800/50">
+              <form onSubmit={handleSendMessage} className="flex gap-3">
+                <Input
+                  type="text"
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  disabled={isLoading}
+                  maxLength={500}
+                  autoFocus
+                  className="flex-1 h-12 backdrop-blur-xl bg-slate-800/50 border-slate-600/50 text-white placeholder:text-slate-400 focus:bg-slate-700/70 focus:border-blue-500/50 transition-all"
+                />
+                <Button
+                  type="submit"
+                  disabled={!newMessage.trim() || isLoading}
+                  className="h-12 w-12 p-0 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 border-0 shadow-lg shadow-blue-500/50 transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:hover:scale-100"
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
-  )
+    </>
+  );
 }
+
